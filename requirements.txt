@@ -1,0 +1,9 @@
+langchain
+langchain-openai
+langchain-text-splitters
+langchain_pinecone
+pinecone_client
+streamlit
+pypdf
+python-dotenv
+tiktoken
