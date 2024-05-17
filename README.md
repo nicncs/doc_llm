@@ -38,7 +38,12 @@ An AI agent with a web interface that helps user search document content from a 
    pip install -r requirements.txt
    ```
 
-3. Run the Streamlit app:
+3. Embedding documents and update vector store:
+   ```bash
+   streamlit run embedding.py
+   ```
+
+4. Run the Streamlit app:
    ```bash
    streamlit run rag.py
    ```
