@@ -5,17 +5,17 @@ An AI agent with a web interface that helps user search document content from a 
 ## Features:
 
 ### MVP1:
-1. Web app
-2. Document loader from local folder
+1. Web app chat interface for Q&A based on the document contents
+2. Document loader from pre-populated local folder
 3. PDF documents reader 
-4. Chat interface for Q&A based on the document contents
+5. Hallucination prevention - answer don’t know if not from any of the document content
 
-### MVP2: 
+
+### MVP2 (future): 
 1. Session chat history to return to previous results
-2. Hallucination prevention - answer don’t know if not from any of the document content
-3. Load document from Google drive or company doc directory
-4. Results will reference to document file name / title 
-5. Return images
+2. Load document from Google drive or company doc directory
+3. Results will reference to document file name / title 
+4. Return images
 
 
 ### Tools used:
@@ -23,3 +23,24 @@ An AI agent with a web interface that helps user search document content from a 
 - Langchain
 - Pinecone
 - Python3.9
+
+### Usage
+
+1. Clone the repository to your local machine:
+
+   ```bash
+   git clone repo
+   cd into working directory
+   ```
+
+2. Install the required dependencies by running:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run the Streamlit app:
+   ```bash
+   streamlit run rag.py
+   ```
+
+   
