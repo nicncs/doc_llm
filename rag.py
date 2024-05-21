@@ -3,7 +3,7 @@ from langchain_community.llms import OpenAI
 from dotenv import load_dotenv
 import os
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -18,9 +18,7 @@ st.header("📑 Document Q&A Agent 🤖")
 index_name = "doc-llm-index"
 
 #Prompt template
-template = """You are an assistant for question-answering tasks and an expert in the policy documents of the company. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer. 
-Use five sentences maximum and keep the answer factual.
+template = """You are an assistant for question-answering tasks and an expert in the policy documents of the company. If you don't know the answer, just say that you don't know, don't try to make up an answer. 
 Answer the question based only on the following document context: {context}
 Question: {question}
 Helpful Answer:"""
@@ -47,8 +45,6 @@ def retrieve_vecstore():
     #for i, doc in enumerate(found_docs):
     #    print(f"Doc {i + 1}.", doc.metadata, "\n", doc.page_content, "\n")
     ##Test
-
-
     return retriever
 
 ##Format docs if needed
@@ -69,12 +65,12 @@ def query_llm(retriever):
     )
 
     ## Without source:
-    chain = setup_and_retrieval | prompt | llm | output_parser
+    #chain = setup_and_retrieval | prompt | llm | output_parser
     ## With source:
-    #chain_with_source = RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"]))) | prompt | llm | output_parser
-    #chain = RunnableParallel(
-    #{"context": retriever, "question": RunnablePassthrough()}
-    #).assign(answer=chain_with_source)
+    rag_chain_from_docs = RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"]))) | prompt | llm | output_parser
+    chain_with_source = RunnableParallel(
+        {"context": retriever, "question": RunnablePassthrough()}
+    ).assign(answer=rag_chain_from_docs) 
     ###
 
     ##Test streaming answer
@@ -82,7 +78,7 @@ def query_llm(retriever):
     #    print(answer, end="", flush=True)
     ##
 
-    return chain
+    return chain_with_source
 
 
 ####Streamlit Web App#################################################################
@@ -92,7 +88,7 @@ def main():
     #chain = query_llm(retriever)
     #Initialize session state with default message and llm chain
     if "messages" not in st.session_state.keys():
-        st.session_state.messages = [{"role": "assistant", "content": "Please ask me any question about the documents provided"}]
+        st.session_state.messages = [{"role": "assistant", "content": "Please ask me any question about our company policies and guidelines"}]
 
     
     #Display chat messages from history on app rerun
@@ -111,15 +107,35 @@ def main():
         st.session_state.messages.append({"role": "user", "content": question})
 
 
+
+
     #Generate a new LLM response if last message is not from assistant
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                chain = query_llm(retriever)
-                response = chain.stream(question)
-                st.write_stream(response)
-                message = {"role": "assistant", "content": response}
+                chain_with_source = query_llm(retriever)
+                source = chain_with_source.stream(question)
+
+                # Compile stream as it's being returned
+                output = {}
+                for chunk in source:
+                    for key in chunk:
+                        if key not in output:
+                            output[key] = chunk[key]
+                        else:
+                            output[key] += chunk[key]
+
+                #Combine answer and document source
+                answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']
+                st.write(answer)
+
+                # Write answer to chat message container
+                message = {"role": "assistant", "content": answer}
                 st.session_state.messages.append(message)
+
+            ##Test
+            #print("Answer", "\n", output['answer'], "\n")
+            #print("Chain with source", "\n Source:", output['context'][1].metadata['source'],"\n")
 
 
 if __name__ == '__main__':
