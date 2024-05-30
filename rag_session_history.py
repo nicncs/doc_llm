@@ -16,6 +16,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
+import socket
 
 
 ####Streamlit web app for QnA from pdf embeddings######
@@ -28,7 +29,11 @@ st.set_page_config(
 )
 st.header("📑 Document Q&A Agent 🤖")
 index_name = "doc-llm-index" #Pinecone index name
-REDIS_URL = "redis://localhost:6379/0" #Docker redis image
+
+if socket.gethostname() == 'localhost':
+    REDIS_URL = "redis://localhost:6379/0"
+else:
+    REDIS_URL = "redis://redis:6379"
 r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
 
@@ -114,8 +119,6 @@ def query_llm():
 ########## Other functions###################
 #Redis functions
 def list_session_ids(REDIS_URL):
-    #Get session_list from redis
-    #r = redis.Redis.from_url(REDIS_URL)
     session_list = r.get("session_list")
     if session_list:
         session_list = session_list.split(",")
@@ -130,7 +133,6 @@ def create_chat():
     session_list = list_session_ids(REDIS_URL)
     session_list.append(session_id)
     #Update session_list to redis
-    #r = redis.Redis.from_url(REDIS_URL)
     r.set("session_list", ",".join(session_list))
     #Test
     #print("Session ID after create chat", session_list)
@@ -145,7 +147,6 @@ def create_chat():
 @st.experimental_dialog("Confirm clear history?")
 def delete_chat():
     # Delete session_List from redis
-    #r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
     if st.button("Delete"):
         with st.warning("Clearing chat history..."):
             #r.delete("session_list") #only remove list of sessions, not chat history
@@ -226,9 +227,7 @@ def main():
     #Initialize new session state with default welcome message
     if "messages" not in st.session_state.keys() or not st.session_state.messages:
         st.session_state.messages.append(AIMessage(content="Please ask me any question about our company policies and guidelines"))
-        #st.session_state.messages = [{"role": "assistant", "content": "Please ask me any question about our company policies and guidelines"}]
-        #with st.chat_message("assistant"):
-        #    st.write(st.session_state.messages[-1]["content"])
+
 
     #Display chat messages from history on app rerun
     for message in st.session_state.messages:
@@ -270,12 +269,6 @@ def main():
                 #st.session_state.messages.append({"role": "assistant", "content": answer})
                 st.session_state.messages.append(AIMessage(content=answer))
                 #print(st.session_state.messages)
-
-
-
-    ##Test
-    #print("Chain with source", "\n Source:", output['context'][1].metadata['source'],"\n")
-
 
 if __name__ == '__main__':
     #

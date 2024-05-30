@@ -20,6 +20,7 @@ services:
       timeout: 3s
       retries: 5
     command: ["redis-server"]
+    hostname: redis
   app:
     build:
       context: .
@@ -34,7 +35,7 @@ services:
     environment:
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: streamlit run rag_history.py
+    command: streamlit run rag_session_history.py
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

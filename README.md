@@ -58,4 +58,10 @@ This repo contains several streamlit apps for testing out different persistence 
    $ streamlit run <script name>.py
    ```
 
-   
+---
+
+5. To run the docker containers with app and redis:
+   ```bash
+   $ docker compose up --build -d
+   $ docker compose down
+   ```
