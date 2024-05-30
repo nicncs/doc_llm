@@ -194,6 +194,8 @@ def main():
     with st.sidebar:
         chat_container = st.container()
         with chat_container:
+            if not session_list:
+                create_chat()
             current_chat = st.radio(
                 label="conversations",
                 format_func=lambda x: x.split("_")[0] if "_" in x else x,
@@ -215,7 +217,7 @@ def main():
         st.write("Currently showing ", st.session_state["current_session"])
         #Get chat history from redis for current chat session if session_list is not empty
         if session_list:
-            st.session_state.messages = RedisChatMessageHistory("1111", url=REDIS_URL).messages
+            st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], url=REDIS_URL).messages
             #st.session_state.messages = r.get(str(st.session_state["current_session"]))
             st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
 
@@ -249,13 +251,13 @@ def main():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                source = query_llm()
-                response = source.invoke(
-                    {"input": question},
-                    config={"configurable": {"session_id": "1111"}}
-                )
-                answer = response["answer"]
-                #answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
+                #source = query_llm()
+                #response = source.invoke(
+                #    {"input": question},
+                #    config={"configurable": {"session_id": st.session_state["current_session"]}}
+                #)
+                #answer = response["answer"]
+                answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
                 
                 #Combine answer and document source
                 #answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']

@@ -48,9 +48,9 @@ This repo contains several streamlit apps for testing out different persistence 
    pip install -r requirements.txt
    ```
 
-3. Embedding documents and update vector store:
+3. Embedding documents located in `/docs` folder and update vector store:
    ```bash
-   streamlit run embedding.py
+   python embedding.py
    ```
 
 4. Run the Streamlit app:
