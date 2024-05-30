@@ -39,23 +39,23 @@ This repo contains several streamlit apps for testing out different persistence 
 1. Clone the repository to your local machine:
 
    ```bash
-   git clone repo
+   $ git clone repo
    cd into working directory
    ```
 
 2. Install the required dependencies by running:
    ```bash
-   pip install -r requirements.txt
+   $ pip install -r requirements.txt
    ```
 
 3. Embedding documents located in `/docs` folder and update vector store:
    ```bash
-   python embedding.py
+   $ python embedding.py
    ```
 
 4. Run the Streamlit app:
    ```bash
-   streamlit run rag.py
+   $ streamlit run <script name>.py
    ```
 
    

@@ -194,6 +194,7 @@ def main():
     with st.sidebar:
         chat_container = st.container()
         with chat_container:
+            #create new chat after clearing history
             if not session_list:
                 create_chat()
             current_chat = st.radio(
@@ -219,14 +220,15 @@ def main():
         if session_list:
             st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], url=REDIS_URL).messages
             #st.session_state.messages = r.get(str(st.session_state["current_session"]))
-            st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
+            #st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
 
 
-    #Initialize session state with default message and llm chain
+    #Initialize new session state with default welcome message
     if "messages" not in st.session_state.keys() or not st.session_state.messages:
-        st.session_state.messages = [{"role": "assistant", "content": "Please ask me any question about our company policies and guidelines"}]
-        with st.chat_message("assistant"):
-            st.write(st.session_state.messages[-1]["content"])
+        st.session_state.messages.append(AIMessage(content="Please ask me any question about our company policies and guidelines"))
+        #st.session_state.messages = [{"role": "assistant", "content": "Please ask me any question about our company policies and guidelines"}]
+        #with st.chat_message("assistant"):
+        #    st.write(st.session_state.messages[-1]["content"])
 
     #Display chat messages from history on app rerun
     for message in st.session_state.messages:
@@ -244,30 +246,30 @@ def main():
         with st.chat_message("user"):
             st.write(question)
         # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.messages.append(HumanMessage(content=question))
+        #st.session_state.messages.append({"role": "user", "content": question})
     
-    
+    print("Chat History", st.session_state.messages)
     #Generate a new LLM response if last message is not from assistant
-    if st.session_state.messages[-1]["role"] != "assistant":
+    if not isinstance(st.session_state.messages[-1], AIMessage):
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                #source = query_llm()
-                #response = source.invoke(
-                #    {"input": question},
-                #    config={"configurable": {"session_id": st.session_state["current_session"]}}
-                #)
-                #answer = response["answer"]
-                answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
+                source = query_llm()
+                response = source.invoke(
+                    {"input": question},
+                    config={"configurable": {"session_id": st.session_state["current_session"]}}
+                )
+                answer = response["answer"]
+                #answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
                 
                 #Combine answer and document source
                 #answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']
                 
                 # Write answer to chat message container
                 st.write(answer)
-                st.session_state.messages.append({"role": "assistant", "content": answer})
-                #Load messages to redis using RedisChatMessageHistory.aadd_messages()
-                #RedisChatMessageHistory("1111", url=REDIS_URL).aadd_messages(st.session_state.messages) 
-                print(st.session_state.messages)
+                #st.session_state.messages.append({"role": "assistant", "content": answer})
+                st.session_state.messages.append(AIMessage(content=answer))
+                #print(st.session_state.messages)
 
 
 
