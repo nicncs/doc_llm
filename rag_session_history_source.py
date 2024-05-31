@@ -36,8 +36,8 @@ index_name = "doc-llm-index" #Pinecone index name
 #r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
 #Elasticache redis
-REDIS_HOST = os.getenv('REDIS_HOST')
-r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
+REDIS_URL = os.getenv('REDIS_URL')
+r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
 
 #Initialize 
