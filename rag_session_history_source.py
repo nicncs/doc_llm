@@ -29,9 +29,15 @@ st.set_page_config(
 st.header("📑 Document Q&A Agent 🤖")
 index_name = "doc-llm-index" #Pinecone index name
 
-REDIS_URL = "redis://localhost:6379"
+#local redis
+#REDIS_URL = "redis://localhost:6379"
+#Docker redis
+#REDIS_URL = "redis://redis:6379"
+#r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
-r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+#Elasticache redis
+REDIS_HOST = os.getenv('REDIS_HOST')
+r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
 
 
 #Initialize 
@@ -246,7 +252,7 @@ def main():
         st.session_state.messages.append(HumanMessage(content=question))
         #st.session_state.messages.append({"role": "user", "content": question})
     
-    print("Chat History", st.session_state.messages)
+    #print("Chat History", st.session_state.messages)
     #Generate a new LLM response if last message is not from assistant
     if not isinstance(st.session_state.messages[-1], AIMessage):
         with st.chat_message("assistant"):
@@ -260,7 +266,7 @@ def main():
                 #answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
                 
                 #Combine answer and document source
-                #answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']
+                #answer = str(response['answer']) + "\n\n" + "Source: " + response['context'][1].metadata['source']
                 
                 # Write answer to chat message container
                 st.write(answer)

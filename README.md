@@ -48,19 +48,21 @@ This repo contains several streamlit apps for testing out different persistence 
    $ pip install -r requirements.txt
    ```
 
-3. Embedding documents located in `/docs` folder and update vector store:
+3. Copy `template.env` to `.env` and replace your OpenAPI and PineconeAPI keys
+
+4. Embedding documents located in `/docs` folder and update vector store:
    ```bash
    $ python embedding.py
    ```
 
-4. Run the Streamlit app:
+5. Run the Streamlit app:
    ```bash
    $ streamlit run <script name>.py
    ```
 
 ---
 
-5. To run the docker containers with app and redis:
+6. To run the docker containers with app and redis:
    ```bash
    $ docker compose up --build -d
    $ docker compose down
