@@ -30,12 +30,11 @@ services:
         condition: service_healthy
     ports:
       - 8501:8501
+    env_file:
+      - .env
     volumes:
       - .:/usr/src/app
-    environment:
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: streamlit run rag_session_history.py
+    command: streamlit run rag_session_history_source.py
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

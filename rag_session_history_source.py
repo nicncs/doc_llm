@@ -21,6 +21,7 @@ from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 ####Streamlit web app for QnA from pdf embeddings######
 ####Global#############################################################
 ##Web Page meta
+load_dotenv()
 
 st.set_page_config(
     page_title="Document Q&A Assistant",
@@ -42,7 +43,6 @@ r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
 #Initialize 
 if "initial_settings" not in st.session_state:
-    load_dotenv()
     pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
     #Session state keys
     st.session_state["current_chat_index"] = 0

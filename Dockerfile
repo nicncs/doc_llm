@@ -48,4 +48,4 @@ COPY . .
 EXPOSE 8501
 
 # Run the application.
-CMD streamlit run rag_session_history.py
+CMD streamlit run rag_session_history_source.py
