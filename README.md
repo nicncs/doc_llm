@@ -5,6 +5,9 @@ An AI agent with a web interface that helps user search document content from a 
 ### Demo on streamlit (rag.py) without chat history
 https://10ddf022sjdj4.streamlit.app/ 
 
+### EKS Fargate deployment with redis session history
+http://47.128.226.219:8501/ 
+
 ## Streamlit Apps
 This repo contains several streamlit apps for testing out different persistence and session management:
 1. `rag_stateless.py` - the most basic stateless RAG app ✅
