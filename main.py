@@ -21,27 +21,29 @@ from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 ####Streamlit web app for QnA from pdf embeddings######
 ####Global#############################################################
 ##Web Page meta
+load_dotenv()
 
 st.set_page_config(
     page_title="Document Q&A Assistant",
-    layout="wide",
+    layout="centered",
 )
-st.header("📑 Document Q&A Agent 🤖")
+st.title("📑 Document Q&A Agent 🤖")
 index_name = "doc-llm-index" #Pinecone index name
 
-REDIS_URL = "redis://localhost:6379"
+#local redis
+#REDIS_URL = "redis://localhost:6379"
+#Docker redis
+#REDIS_URL = "redis://redis:6379"
+#r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
+#Elasticache redis
+REDIS_URL = os.getenv('REDIS_URL')
 r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+keys = r.keys()
+# Get all values associated with the keys
+#for key in keys:
+#    print("\nRedis Dump Keys:", key)
 
-
-#Initialize 
-if "initial_settings" not in st.session_state:
-    load_dotenv()
-    pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-    #Session state keys
-    st.session_state["current_chat_index"] = 0
-    st.session_state["current_session"] = ""
-    st.session_state["initial_settings"] = True
 
 ####RAG###################################################################
 ##Retriever
@@ -101,9 +103,9 @@ def query_llm():
 
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
-    ### Persist chat history in Redis by session_id
-    def get_message_history(session_id: str) -> RedisChatMessageHistory:
-        return RedisChatMessageHistory(session_id, url=REDIS_URL)
+    ### Persist chat history in Redis by session_id and key_prefix ###
+    def get_message_history(session_id: str, key_prefix: str = st.session_state["username"]) -> RedisChatMessageHistory:
+        return RedisChatMessageHistory(session_id, key_prefix=key_prefix, url=REDIS_URL)
 
     conversational_rag_chain = RunnableWithMessageHistory(
         rag_chain,
@@ -116,22 +118,24 @@ def query_llm():
 
 ########## Other functions###################
 #Redis functions
-def list_session_ids(REDIS_URL):
-    session_list = r.get("session_list")
+def list_session_ids(REDIS_URL, user_session):
+    #get session list for current user
+    session_list = r.get(user_session)
     if session_list:
         session_list = session_list.split(",")
+        st.session_state["current_chat_index"] = len(session_list) - 1
     else:
         session_list = []
     return session_list
 
 #Create chat session, generate new session ID based on datetime
-def create_chat():
+def create_chat(user_session):
     session_id = "chat from " + datetime.datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
     # append session_id to session_list
-    session_list = list_session_ids(REDIS_URL)
+    session_list = list_session_ids(REDIS_URL, user_session)
     session_list.append(session_id)
-    #Update session_list to redis
-    r.set("session_list", ",".join(session_list))
+    #Update current user's session_list to redis
+    r.set(user_session, ",".join(session_list))
     #Test
     #print("Session ID after create chat", session_list)
     #set st.session_state["current_chat_index"] to latest session
@@ -143,26 +147,28 @@ def create_chat():
 
 #Clear all chat session from redis with session_list key
 @st.experimental_dialog("Confirm clear history?")
-def delete_chat():
+def delete_chat(user_session):
     # Delete session_List from redis
     if st.button("Delete"):
         with st.warning("Clearing chat history..."):
-            #r.delete("session_list") #only remove list of sessions, not chat history
-            r.flushdb()
+            #All chat history for user
+            #Redis remove list of current user sessions and history
+            r.delete(user_session, *r.keys(st.session_state["username"] + "*"))
+            #r.flushdb()
             st.session_state["current_chat_index"] = 0
             st.session_state.messages = []
             st.rerun()
 
-###
-#def session_callback():
-    #Clear chat session state
-    #st.session_state.messages = []
-    
-
 ####Streamlit Web App#################################################################
-def main():
+def dashboard():
+    #unique key for current user
+    user_session = st.session_state["username"] + "session_list"
     retriever = retrieve_vecstore()
-    session_list = list_session_ids(REDIS_URL)
+    session_list = list_session_ids(REDIS_URL, user_session)
+
+    #Debug redis storage
+    #print("\nCurrent user:", st.session_state["username"])
+    #print("\nCurrent user_session:", session_list)
 
     #Buttons to create and delete conversations
     with st.sidebar:
@@ -181,13 +187,13 @@ def main():
             "New", use_container_width=True, key="create_chat_button"
         )
         if create_chat_button:
-            create_chat()
+            create_chat(user_session)
 
         delete_chat_button = c2.button(
             "Clear History", use_container_width=True, key="delete_chat_button"
         )
         if delete_chat_button:
-            delete_chat()
+            delete_chat(user_session)
 
     #Sidebar for conversation history
     with st.sidebar:
@@ -195,7 +201,7 @@ def main():
         with chat_container:
             #create new chat after clearing history
             if not session_list:
-                create_chat()
+                create_chat(user_session)
             current_chat = st.radio(
                 label="conversations",
                 format_func=lambda x: x.split("_")[0] if "_" in x else x,
@@ -217,14 +223,14 @@ def main():
         st.write("Currently showing ", st.session_state["current_session"])
         #Get chat history from redis for current chat session if session_list is not empty
         if session_list:
-            st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], url=REDIS_URL).messages
+            st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], key_prefix=st.session_state["username"], url=REDIS_URL).messages
             #st.session_state.messages = r.get(str(st.session_state["current_session"]))
             #st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
 
 
     #Initialize new session state with default welcome message
     if "messages" not in st.session_state.keys() or not st.session_state.messages:
-        st.session_state.messages.append(AIMessage(content="Please ask me any question about our company policies and guidelines"))
+        st.session_state.messages.append(AIMessage(content="""Please ask me any question about our company policies and guidelines."""))
 
 
     #Display chat messages from history on app rerun
@@ -246,7 +252,7 @@ def main():
         st.session_state.messages.append(HumanMessage(content=question))
         #st.session_state.messages.append({"role": "user", "content": question})
     
-    print("Chat History", st.session_state.messages)
+    #print("Chat History", st.session_state.messages)
     #Generate a new LLM response if last message is not from assistant
     if not isinstance(st.session_state.messages[-1], AIMessage):
         with st.chat_message("assistant"):
@@ -254,19 +260,41 @@ def main():
                 source = query_llm()
                 response = source.invoke(
                     {"input": question},
-                    config={"configurable": {"session_id": st.session_state["current_session"]}}
+                    config={"configurable": {"session_id": st.session_state["current_session"], "key_prefix": st.session_state["username"]}}
                 )
                 answer = response["answer"]
                 #answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
                 
                 #Combine answer and document source
-                #answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']
+                #answer = str(response['answer']) + "\n\n" + "Source: " + response['context'][1].metadata['source']
                 
                 # Write answer to chat message container
                 st.write(answer)
                 #st.session_state.messages.append({"role": "assistant", "content": answer})
                 st.session_state.messages.append(AIMessage(content=answer))
                 #print(st.session_state.messages)
+
+
+#Main function
+def main():
+    pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+
+    if "initial_settings" not in st.session_state:
+        with st.form("username_form"):
+            st.subheader("Please enter your username to retrieve chat history")
+            username = st.text_input("Username", value="demo-user")
+            submitted = st.form_submit_button("Submit")
+            print("Username: ", username, submitted, "\n")
+            if submitted:
+                st.session_state["username"] = username + ":"
+                #Session state keys
+                #Initialize 
+                st.session_state["current_chat_index"] = 0
+                st.session_state["current_session"] = ""
+                st.session_state["initial_settings"] = True
+                st.rerun()
+    else:
+        dashboard()
 
 if __name__ == '__main__':
     #

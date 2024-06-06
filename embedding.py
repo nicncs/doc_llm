@@ -33,7 +33,11 @@ def load_documents():
     loader = PyPDFDirectoryLoader("docs/")
     docs = loader.load()
 
-    #Test
+    #generate .txt file that will list out in bullet format the filenames from ./docs directory
+    with open('document_list.txt', 'w') as f:
+        for item in loader.files:
+            f.write("%s\n" % item)
+
     #print(docs[0].metadata['source'])
     #print(docs[0].page_content[:1000])
     #for i in range(len(docs)): print(docs[i].metadata['source'])
@@ -61,6 +65,10 @@ def embeddings_on_vecstore(docs):
 
     vectorstore = PineconeVectorStore(index_name=index_name, embedding=embeddings)
     vectorstore.add_documents(docs)
+
+#Generate a json file consisting of bullet list the filenames from ./docs directory
+def generate_json():
+
 
 
 ####Execute#################################################################

@@ -21,7 +21,6 @@ from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 ####Streamlit web app for QnA from pdf embeddings######
 ####Global#############################################################
 ##Web Page meta
-load_dotenv()
 
 st.set_page_config(
     page_title="Document Q&A Assistant",
@@ -30,19 +29,19 @@ st.set_page_config(
 st.header("📑 Document Q&A Agent 🤖")
 index_name = "doc-llm-index" #Pinecone index name
 
-#local redis
-#REDIS_URL = "redis://localhost:6379"
-#Docker redis
-#REDIS_URL = "redis://redis:6379"
-#r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+REDIS_URL = "redis://localhost:6379"
 
-#Elasticache redis
-REDIS_URL = os.getenv('REDIS_URL')
 r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+# Get all keys
+keys = r.keys()
 
+# Get all values associated with the keys
+for key in keys:
+    print('Key:', key)
 
 #Initialize 
 if "initial_settings" not in st.session_state:
+    load_dotenv()
     pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
     #Session state keys
     st.session_state["current_chat_index"] = 0
@@ -108,8 +107,8 @@ def query_llm():
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
     ### Persist chat history in Redis by session_id
-    def get_message_history(session_id: str) -> RedisChatMessageHistory:
-        return RedisChatMessageHistory(session_id, url=REDIS_URL)
+    def get_message_history(session_id: str, key_prefix: str = 'default_user:') -> RedisChatMessageHistory:
+        return RedisChatMessageHistory(session_id, key_prefix=key_prefix, url=REDIS_URL)
 
     conversational_rag_chain = RunnableWithMessageHistory(
         rag_chain,
@@ -167,6 +166,7 @@ def delete_chat():
 
 ####Streamlit Web App#################################################################
 def main():
+    username = "test_user:"
     retriever = retrieve_vecstore()
     session_list = list_session_ids(REDIS_URL)
 
@@ -223,7 +223,7 @@ def main():
         st.write("Currently showing ", st.session_state["current_session"])
         #Get chat history from redis for current chat session if session_list is not empty
         if session_list:
-            st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], url=REDIS_URL).messages
+            st.session_state.messages = RedisChatMessageHistory(st.session_state["current_session"], key_prefix=username, url=REDIS_URL).messages
             #st.session_state.messages = r.get(str(st.session_state["current_session"]))
             #st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
 
@@ -253,6 +253,7 @@ def main():
         #st.session_state.messages.append({"role": "user", "content": question})
     
     #print("Chat History", st.session_state.messages)
+    
     #Generate a new LLM response if last message is not from assistant
     if not isinstance(st.session_state.messages[-1], AIMessage):
         with st.chat_message("assistant"):
@@ -260,13 +261,13 @@ def main():
                 source = query_llm()
                 response = source.invoke(
                     {"input": question},
-                    config={"configurable": {"session_id": st.session_state["current_session"]}}
+                    config={"configurable": {"session_id": st.session_state["current_session"], "key_prefix": username}},
                 )
                 answer = response["answer"]
                 #answer = "This is a test answer for " + st.session_state["current_session"] + " for the question " + question
                 
                 #Combine answer and document source
-                #answer = str(response['answer']) + "\n\n" + "Source: " + response['context'][1].metadata['source']
+                #answer = str(output['answer']) + "\n\n" + "Source: " + output['context'][1].metadata['source']
                 
                 # Write answer to chat message container
                 st.write(answer)

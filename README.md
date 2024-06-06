@@ -10,9 +10,9 @@ http://47.128.226.219:8501/
 
 ## Streamlit Apps
 This repo contains several streamlit apps for testing out different persistence and session management:
-1. `rag_stateless.py` - the most basic stateless RAG app ✅
-2. `rag_history.py` - persist session in Redis for 1 session only ✅
-3. `rag_session_history.py` - allows multiple sessions with history of each session persisting in Redis ✅
+1. `examples/rag_stateless.py` - the most basic stateless RAG app ✅
+2. `examples/rag_history.py` - persist session in Redis for 1 session only ✅
+3. `main.py` - allows multiple user sessions with history of each session persisting in Redis ✅
 
 
 ## Features:
@@ -36,6 +36,7 @@ This repo contains several streamlit apps for testing out different persistence 
 - Langchain
 - Pinecone
 - Python3.9
+- Redis
 
 ### Usage
 
