@@ -6,15 +6,29 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
+import nltk
+from langchain.text_splitter import NLTKTextSplitter
 
 #####Py script to load pdf documents, chunking, embedding and storing into Pinecone vector DB###
 ####Global#############################################################
-index_name = "doc-llm-index"
+index_name = "esg-index"
+
+nltk.download('punkt')
 
 #Initialize 
+#Generate a .txt file that will list out in bullet format the files inside the /docs directory
+def list_files():
+    files = os.listdir("../ESG-docs")
+    files = [file for file in files if not file.startswith('.')]  # Ignore files starting with '.'
+    files.sort()  # Sort the files alphabetically
+    with open("file_list.txt", "w") as f:
+        for file in files:
+            f.write(f"- {file}\n")
+        
 def _init():
     load_dotenv()
     pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+    #Create index if not exists
     if index_name not in pc.list_indexes().names():
         pc.create_index(
             name=index_name,
@@ -25,18 +39,15 @@ def _init():
                 region='us-east-1'
             ) 
         ) 
+    list_files()
   
 ####Indexing#############################################################
 
+
 #PDF Doc Loader
 def load_documents():
-    loader = PyPDFDirectoryLoader("docs/")
+    loader = PyPDFDirectoryLoader("../ESG-docs")
     docs = loader.load()
-
-    #generate .txt file that will list out in bullet format the filenames from ./docs directory
-    with open('document_list.txt', 'w') as f:
-        for item in loader.files:
-            f.write("%s\n" % item)
 
     #print(docs[0].metadata['source'])
     #print(docs[0].page_content[:1000])
@@ -46,15 +57,24 @@ def load_documents():
 
 #Text Splitter
 def split_documents(documents):
-    text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=200, add_start_index=True)
-    chunks = text_splitter.split_documents(documents)
+    #Use recursive splitter
+    #text_splitter = RecursiveCharacterTextSplitter(
+    #chunk_size=1000, chunk_overlap=20, add_start_index=True)
+    #chunks = text_splitter.split_documents(documents)
 
+    #Use NLTK splitter
+    text_splitter = NLTKTextSplitter()
+    chunks = text_splitter.split_documents(documents)
     #Test
     #print(len(chunks))
     #print(chunks[1].metadata)
     #for i in range(len(chunks)): print(chunks[i].metadata)
-
+    #Output chunks to file chunks.txt
+    with open("chunks.txt", "w") as f:
+        for chunk in chunks:
+            f.write(f"Chunk Source: {chunk.metadata['source']}\n")
+            f.write("Source" + chunk.page_content)
+            f.write("\n\n")
     return chunks
   
 
@@ -62,13 +82,8 @@ def split_documents(documents):
 def embeddings_on_vecstore(docs):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
     #docsearch = PineconeVectorStore.from_documents(docs, embeddings, index_name=index_name)
-
     vectorstore = PineconeVectorStore(index_name=index_name, embedding=embeddings)
     vectorstore.add_documents(docs)
-
-#Generate a json file consisting of bullet list the filenames from ./docs directory
-def generate_json():
-
 
 
 ####Execute#################################################################

@@ -28,7 +28,7 @@ st.set_page_config(
     layout="centered",
 )
 st.title("📑 Document Q&A Agent 🤖")
-index_name = "doc-llm-index" #Pinecone index name
+index_name = "esg-index" #Pinecone index name
 
 #local redis
 #REDIS_URL = "redis://localhost:6379"
@@ -50,8 +50,9 @@ keys = r.keys()
 def retrieve_vecstore():
     embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
     docsearch = PineconeVectorStore.from_existing_index(index_name=index_name, embedding=embeddings)
-    retriever = docsearch.as_retriever(search_type="mmr", search_kwargs={'k': 2, 'fetch_k': 10})
+    retriever = docsearch.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 10})
     
+        
     ##Test vector store result
     #query = "What is the requirement on cloud provider"
     #found_docs = docsearch.max_marginal_relevance_search(query, k=2, fetch_k=10)
@@ -64,7 +65,7 @@ def retrieve_vecstore():
 ##Generate LLM response
 def query_llm():
     retriever = retrieve_vecstore()
-    llm = ChatOpenAI(model="gpt-4-turbo", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
     ### Contextualize question with chat history ###
     contextualize_q_system_prompt = """Given a chat history and the latest user question \
@@ -228,6 +229,12 @@ def dashboard():
             #st.write("Chat History from Redis", "\n", st.session_state.messages, "\n")
 
 
+    #List out the files in ./file_list.txt and add into string
+    file_list = open("./file_list.txt", "r").read()
+    with st.sidebar:
+        st.write("### Available Documents for Q&A:")
+        st.write(file_list)
+    
     #Initialize new session state with default welcome message
     if "messages" not in st.session_state.keys() or not st.session_state.messages:
         st.session_state.messages.append(AIMessage(content="""Please ask me any question about our company policies and guidelines."""))
